@@ -14,7 +14,12 @@ function IntakeForm() {
     description: "",
   });
 
-  // Updates the corresponding field when the user types or selects something
+  // Tracks the status of the submission
+  const [submissionStatus, setSubmissionStatus] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Updates the corresponding field
   function handleChange(event) {
     const { name, value } = event.target;
 
@@ -22,12 +27,48 @@ function IntakeForm() {
       ...previousData,
       [name]: value,
     }));
+
+    // Clear old submission errors if the user edits their information
+    setSubmissionStatus("");
   }
 
-  // Moves the user from Step 1 to Step 2
+  // Moves from Step 1 to Step 2
   function handleNext(event) {
     event.preventDefault();
     setStep(2);
+  }
+
+  // Sends the completed form to the Express backend
+  async function handleSubmit() {
+    if (isSubmitting || isSubmitted) return;
+
+    setIsSubmitting(true);
+    setSubmissionStatus("");
+
+    try {
+      const response = await fetch("http://localhost:5000/api/intake", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Submission failed.");
+      }
+
+      setSubmissionStatus(data.message);
+      setIsSubmitted(true);
+    } catch (error) {
+      setSubmissionStatus(
+        error.message || "Could not connect to the backend."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -154,9 +195,33 @@ function IntakeForm() {
             <strong>Project Description:</strong> {formData.description}
           </p>
 
-          <button type="button" onClick={() => setStep(2)}>
-            Back
-          </button>
+          <div className="form-buttons">
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              disabled={isSubmitting || isSubmitted}
+            >
+              Back
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting || isSubmitted}
+            >
+              {isSubmitting
+                ? "Submitting..."
+                : isSubmitted
+                ? "Submitted"
+                : "Submit"}
+            </button>
+          </div>
+
+          {submissionStatus && (
+            <p role="status">
+              {submissionStatus}
+            </p>
+          )}
         </div>
       )}
     </div>

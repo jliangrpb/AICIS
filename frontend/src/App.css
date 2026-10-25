@@ -25,3 +25,25 @@ button {
   padding: 0.7rem 1.2rem;
   cursor: pointer;
 }
+
+/* Step 2: Service / Project Information */
+
+select,
+textarea {
+  padding: 0.7rem;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+/* Form navigation buttons */
+
+.form-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.form-buttons button {
+  flex: 1;
+}

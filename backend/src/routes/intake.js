@@ -1,6 +1,13 @@
 
 const express = require("express");
-const { saveSubmission } = require("../services/submissionService");
+
+const {
+  saveSubmission,
+} = require("../services/submissionService");
+
+const {
+  analyzeSubmission,
+} = require("../services/aiService");
 
 const router = express.Router();
 
@@ -24,7 +31,7 @@ router.post("/", async (req, res) => {
     });
   }
 
-  // Basic email validation
+  // Validate email
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if (!emailPattern.test(email.trim())) {
@@ -41,13 +48,33 @@ router.post("/", async (req, res) => {
     });
   }
 
+  const formData = {
+    name: name.trim(),
+    email: email.trim(),
+    company: (company || "").trim(),
+    service: service.trim(),
+    description: description.trim(),
+  };
+
+  // Generate AI triage
+  let aiAnalysis;
+
+  try {
+    aiAnalysis = await analyzeSubmission(formData);
+  } catch (error) {
+    console.error("AI triage failed:", error.message);
+
+    return res.status(503).json({
+      success: false,
+      message: "AI analysis is temporarily unavailable. Please try again.",
+    });
+  }
+
+  // Save the submission and its AI analysis
   try {
     const submission = await saveSubmission({
-      name: name.trim(),
-      email: email.trim(),
-      company: (company || "").trim(),
-      service: service.trim(),
-      description: description.trim(),
+      ...formData,
+      aiAnalysis,
     });
 
     return res.status(201).json({

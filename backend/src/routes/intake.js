@@ -1,17 +1,22 @@
 
 const express = require("express");
+const { saveSubmission } = require("../services/submissionService");
 
 const router = express.Router();
 
-router.post("/", (req, res) => {
-  const { name, email, company, service, description } = req.body;
+router.post("/", async (req, res) => {
+  const { name, email, company, service, description } = req.body || {};
 
   // Validate required fields
   if (
-    !name?.trim() ||
-    !email?.trim() ||
-    !service?.trim() ||
-    !description?.trim()
+    typeof name !== "string" ||
+    typeof email !== "string" ||
+    typeof service !== "string" ||
+    typeof description !== "string" ||
+    !name.trim() ||
+    !email.trim() ||
+    !service.trim() ||
+    !description.trim()
   ) {
     return res.status(400).json({
       success: false,
@@ -22,26 +27,42 @@ router.post("/", (req, res) => {
   // Basic email validation
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  if (!emailPattern.test(email)) {
+  if (!emailPattern.test(email.trim())) {
     return res.status(400).json({
       success: false,
       message: "Please enter a valid email address.",
     });
   }
 
-  // For now, log the submission instead of saving it
-  console.log("New intake submission received:", {
-    name,
-    email,
-    company,
-    service,
-    description,
-  });
+  if (company != null && typeof company !== "string") {
+    return res.status(400).json({
+      success: false,
+      message: "Company must be text.",
+    });
+  }
 
-  return res.status(200).json({
-    success: true,
-    message: "Your intake form was received successfully.",
-  });
+  try {
+    const submission = await saveSubmission({
+      name: name.trim(),
+      email: email.trim(),
+      company: (company || "").trim(),
+      service: service.trim(),
+      description: description.trim(),
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Your intake form was submitted successfully.",
+      submissionId: submission.id,
+    });
+  } catch (error) {
+    console.error("Failed to save intake submission:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to save your submission. Please try again.",
+    });
+  }
 });
 
 module.exports = router;
